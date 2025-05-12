@@ -1,6 +1,7 @@
-use rvim::TuiRenderer;
+use rvim::{Buffer, TuiRenderer};
 
 fn main() {
-    let renderer = TuiRenderer::new();
+    let buffer = Buffer::new(String::from("testFile.txt"));
+    let renderer = TuiRenderer::new(buffer);
     renderer.run();
 }
