@@ -1,6 +1,9 @@
-use ratatui::text::Line;
+use ratatui::style::Stylize;
+use ratatui::text::{Line, Span};
 use ratatui::widgets::Paragraph;
 use std::fs;
+
+use crate::Cursor;
 
 #[derive(Debug)]
 pub struct Buffer {
@@ -19,11 +22,27 @@ impl Buffer {
         Self { file, file_content }
     }
 
-    pub fn to_parragraph(&self) -> Paragraph {
+    pub fn to_parragraph(&self, cursor: &mut Cursor) -> Paragraph {
         let lines: Vec<Line> = self
             .file_content()
             .iter()
-            .map(|x| Line::from(x.as_str()))
+            .enumerate()
+            .map(|(y_index, x)| {
+                if y_index == *cursor.y_mut() {
+                    let span: Vec<Span> = x
+                        .chars()
+                        .enumerate()
+                        .map(|(x_index, xdos)| {
+                            if x_index == *cursor.x_mut() {
+                                return Span::from(xdos.to_string()).on_white().black();
+                            }
+                            Span::from(xdos.to_string())
+                        })
+                        .collect();
+                    return Line::from(span);
+                }
+                Line::from(x.as_str())
+            })
             .collect();
 
         Paragraph::new(lines)
@@ -41,4 +60,3 @@ impl Buffer {
         &self.file
     }
 }
-

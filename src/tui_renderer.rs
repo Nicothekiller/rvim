@@ -6,36 +6,49 @@ use ratatui::{
     widgets::{Block, Borders, Paragraph},
 };
 
-use crate::Buffer;
+use crate::{Buffer, Cursor};
 
 #[derive(Debug)]
 pub struct TuiRenderer {
     buffer: Buffer,
+    cursor: Cursor,
 }
 
 impl TuiRenderer {
     pub fn new(buffer: Buffer) -> Self {
-        Self { buffer }
+        let cursor = Cursor::new(0, 0);
+        Self { buffer, cursor }
     }
 
-    pub fn run(&self) {
+    pub fn run(&mut self) {
         let mut terminal = ratatui::init();
         loop {
             self.draw(&mut terminal);
-            if matches!(event::read().expect("failed to read event"), Event::Key(_)) {
-                break;
+            let Ok(x) = event::read() else { continue };
+            if let Event::Key(key) = x {
+                match key.code {
+                    event::KeyCode::Char('q') => break,
+                    event::KeyCode::Char('l') => *self.cursor.x_mut() += 1,
+                    event::KeyCode::Char('k') => *self.cursor.y_mut() -= 1,
+                    event::KeyCode::Char('j') => *self.cursor.y_mut() += 1,
+                    event::KeyCode::Char('h') => *self.cursor.x_mut() -= 1,
+                    _ => continue,
+                }
             }
         }
         ratatui::restore();
     }
 
-    fn draw(&self, terminal: &mut DefaultTerminal) {
+    fn draw(&mut self, terminal: &mut DefaultTerminal) {
         terminal
             .draw(|frame| {
                 let vertical = Layout::vertical([Constraint::Fill(1), Constraint::Length(2)]);
                 let [main_area, status_area] = vertical.areas(frame.area());
 
-                let main_text = self.buffer.to_parragraph().bg(Color::Rgb(40, 44, 52));
+                let main_text = self
+                    .buffer
+                    .to_parragraph(&mut self.cursor)
+                    .bg(Color::Rgb(40, 44, 52));
 
                 let status_text = Paragraph::new("Normal")
                     .block(
