@@ -29,9 +29,17 @@ impl TuiRenderer {
                 match key.code {
                     event::KeyCode::Char('q') => break,
                     event::KeyCode::Char('l') => *self.cursor.x_mut() += 1,
-                    event::KeyCode::Char('k') => *self.cursor.y_mut() -= 1,
+                    event::KeyCode::Char('k') => {
+                        if *self.cursor.y_mut() != 0 {
+                            *self.cursor.y_mut() -= 1
+                        }
+                    }
                     event::KeyCode::Char('j') => *self.cursor.y_mut() += 1,
-                    event::KeyCode::Char('h') => *self.cursor.x_mut() -= 1,
+                    event::KeyCode::Char('h') => {
+                        if *self.cursor.x_mut() != 0 {
+                            *self.cursor.x_mut() -= 1
+                        }
+                    }
                     _ => continue,
                 }
             }

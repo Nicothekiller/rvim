@@ -27,25 +27,33 @@ impl Buffer {
             .file_content()
             .iter()
             .enumerate()
-            .map(|(y_index, x)| {
+            .map(|(y_index, line)| {
                 if y_index == *cursor.y_mut() {
-                    let span: Vec<Span> = x
+                    let span: Vec<Span> = line
                         .chars()
                         .enumerate()
-                        .map(|(x_index, xdos)| {
+                        .map(|(x_index, cchar)| {
                             if x_index == *cursor.x_mut() {
-                                return Span::from(xdos.to_string()).on_white().black();
+                                return Span::from(cchar.to_string()).on_white().black();
                             }
-                            Span::from(xdos.to_string())
+                            Span::from(cchar.to_string())
                         })
                         .collect();
                     return Line::from(span);
                 }
-                Line::from(x.as_str())
+                Line::from(line.as_str())
             })
             .collect();
 
-        Paragraph::new(lines)
+        if cursor.y_copy() + crossterm::terminal::size().unwrap().1 as usize > lines.len() {
+            let text: Vec<Line> = lines[cursor.y_copy()..lines.len()].to_vec();
+            Paragraph::new(text)
+        } else {
+            let text: Vec<Line> = lines[cursor.y_copy()
+                ..cursor.y_copy() + crossterm::terminal::size().unwrap().1 as usize]
+                .to_vec();
+            Paragraph::new(text)
+        }
     }
 
     pub fn file_content(&self) -> &[String] {
