@@ -23,12 +23,19 @@ impl Buffer {
     }
 
     pub fn to_parragraph(&self, cursor: &mut Cursor) -> Paragraph {
-        let lines: Vec<Line> = self
-            .file_content()
+        let file_len = self.file_content().len();
+        let range = if cursor.y_copy() + crossterm::terminal::size().unwrap().1 as usize > file_len
+        {
+            cursor.y_copy()..file_len
+        } else {
+            cursor.y_copy()..cursor.y_copy() + crossterm::terminal::size().unwrap().1 as usize
+        };
+
+        let lines: Vec<Line> = self.file_content()[range]
             .iter()
             .enumerate()
             .map(|(y_index, line)| {
-                if y_index == *cursor.y_mut() {
+                if y_index == 0 {
                     let span: Vec<Span> = line
                         .chars()
                         .enumerate()
@@ -45,15 +52,7 @@ impl Buffer {
             })
             .collect();
 
-        if cursor.y_copy() + crossterm::terminal::size().unwrap().1 as usize > lines.len() {
-            let text: Vec<Line> = lines[cursor.y_copy()..lines.len()].to_vec();
-            Paragraph::new(text)
-        } else {
-            let text: Vec<Line> = lines[cursor.y_copy()
-                ..cursor.y_copy() + crossterm::terminal::size().unwrap().1 as usize]
-                .to_vec();
-            Paragraph::new(text)
-        }
+        Paragraph::new(lines)
     }
 
     pub fn file_content(&self) -> &[String] {
