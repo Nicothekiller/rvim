@@ -8,43 +8,80 @@ use ratatui::{
 
 use crate::{Buffer, Cursor};
 
+#[derive(Debug, PartialEq)]
+pub enum EditingMode {
+    Normal,
+    Insert,
+}
+
 #[derive(Debug)]
 pub struct TuiRenderer {
     buffer: Buffer,
     cursor: Cursor,
+    mode: EditingMode,
+    should_quit: bool,
 }
 
 impl TuiRenderer {
     pub fn new(buffer: Buffer) -> Self {
         let cursor = Cursor::new(0, 0);
-        Self { buffer, cursor }
+        let mode = EditingMode::Normal;
+        Self {
+            buffer,
+            cursor,
+            mode,
+            should_quit: false,
+        }
     }
 
     pub fn run(&mut self) {
         let mut terminal = ratatui::init();
-        loop {
+        while !self.should_quit {
             self.draw(&mut terminal);
-            let Ok(x) = event::read() else { continue };
-            if let Event::Key(key) = x {
-                match key.code {
-                    event::KeyCode::Char('q') => break,
-                    event::KeyCode::Char('l') => *self.cursor.x_mut() += 1,
-                    event::KeyCode::Char('k') => {
-                        if *self.cursor.y_mut() != 0 {
-                            *self.cursor.y_mut() -= 1
-                        }
-                    }
-                    event::KeyCode::Char('j') => *self.cursor.y_mut() += 1,
-                    event::KeyCode::Char('h') => {
-                        if *self.cursor.x_mut() != 0 {
-                            *self.cursor.x_mut() -= 1
-                        }
-                    }
-                    _ => continue,
+            self.handle_input();
+        }
+        ratatui::restore();
+    }
+
+    fn handle_input(&mut self) {
+        let Ok(x) = event::read() else { return };
+
+        if let Event::Key(key) = x {
+            match self.mode {
+                EditingMode::Normal => {
+                    self.normal_ih(key);
+                }
+                EditingMode::Insert => {
+                    self.insert_ih(key);
                 }
             }
         }
-        ratatui::restore();
+    }
+
+    fn insert_ih(&mut self, key: event::KeyEvent) {
+        if key.code == event::KeyCode::Esc {
+            self.mode = EditingMode::Normal
+        }
+    }
+
+    fn normal_ih(&mut self, key: event::KeyEvent) {
+        match key.code {
+            event::KeyCode::Char('q') => self.should_quit = true,
+            event::KeyCode::Char('l') => *self.cursor.x_mut() += 1,
+            event::KeyCode::Char('k') => {
+                if *self.cursor.y_mut() != 0 {
+                    *self.cursor.y_mut() -= 1
+                }
+            }
+            event::KeyCode::Char('j') => *self.cursor.y_mut() += 1,
+            event::KeyCode::Char('h') => {
+                if *self.cursor.x_mut() != 0 {
+                    *self.cursor.x_mut() -= 1
+                }
+            }
+            event::KeyCode::Char('i') => self.mode = EditingMode::Insert,
+            _ => {}
+        }
     }
 
     fn draw(&mut self, terminal: &mut DefaultTerminal) {
@@ -58,7 +95,12 @@ impl TuiRenderer {
                     .to_parragraph(&mut self.cursor)
                     .bg(Color::Rgb(40, 44, 52));
 
-                let status_text = Paragraph::new("Normal")
+                let status_text_mode = match self.mode {
+                    EditingMode::Normal => "NORMAL",
+                    EditingMode::Insert => "INSERT",
+                };
+
+                let status_text = Paragraph::new(status_text_mode)
                     .block(
                         Block::bordered()
                             .borders(Borders::LEFT | Borders::TOP | Borders::RIGHT)
