@@ -1,7 +1,7 @@
-use rvim::{Buffer, TuiRenderer};
+use rvim::{FileBuffer, TuiRenderer};
 
 fn main() {
-    let buffer = Buffer::new(String::from("src/buffer.rs"));
+    let buffer = FileBuffer::new(String::from("src/buffer.rs"));
     let mut renderer = TuiRenderer::new(buffer);
     renderer.run();
 }

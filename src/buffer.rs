@@ -5,13 +5,19 @@ use std::fs;
 
 use crate::Cursor;
 
+/// Represents an open file. Also handles the editing of the file.
 #[derive(Debug)]
-pub struct Buffer {
+pub struct FileBuffer {
     file: String,
     file_content: Vec<String>,
 }
 
-impl Buffer {
+impl FileBuffer {
+    /// Creates a new [`FileBuffer`].
+    ///
+    /// # Panics
+    ///
+    /// Panics if file does not exist.
     pub fn new(file: String) -> Self {
         let file_content = fs::read_to_string(&file)
             .expect("File {file} not found or could not be opened.")
@@ -22,7 +28,13 @@ impl Buffer {
         Self { file, file_content }
     }
 
-    pub fn to_parragraph(&self, cursor: &mut Cursor) -> Paragraph {
+    /// Returns the current open file as a paragraph for rendering. Only returns the area where the
+    /// cursor is currently at.
+    ///
+    /// # Panics
+    ///
+    /// Panics if [`crossterm::terminal::size`] fails.
+    pub fn to_paragraph(&self, cursor: &mut Cursor) -> Paragraph {
         let file_len = self.file_content().len();
         let range = if cursor.y_copy() + crossterm::terminal::size().unwrap().1 as usize > file_len
         {
@@ -55,14 +67,17 @@ impl Buffer {
         Paragraph::new(lines)
     }
 
+    /// Returns a reference to the file content of this [`FileBuffer`].
     pub fn file_content(&self) -> &[String] {
         &self.file_content
     }
 
+    /// Returns a mutable reference to the file content of this [`FileBuffer`].
     pub fn file_content_mut(&mut self) -> &mut Vec<String> {
         &mut self.file_content
     }
 
+    /// Returns a reference to the file of this [`FileBuffer`].
     pub fn file(&self) -> &str {
         &self.file
     }

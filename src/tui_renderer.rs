@@ -6,7 +6,7 @@ use ratatui::{
     widgets::{Block, Borders, Paragraph},
 };
 
-use crate::{Buffer, Cursor};
+use crate::{Cursor, FileBuffer};
 
 #[derive(Debug, PartialEq)]
 pub enum EditingMode {
@@ -14,16 +14,18 @@ pub enum EditingMode {
     Insert,
 }
 
+/// Struct for handling and rendering the tui. Should be used by creating a new [`TuiRenderer`] and using [`TuiRenderer::run`].
 #[derive(Debug)]
 pub struct TuiRenderer {
-    buffer: Buffer,
+    buffer: FileBuffer,
     cursor: Cursor,
     mode: EditingMode,
     should_quit: bool,
 }
 
 impl TuiRenderer {
-    pub fn new(buffer: Buffer) -> Self {
+    /// Creates a new [`TuiRenderer`].
+    pub fn new(buffer: FileBuffer) -> Self {
         let cursor = Cursor::new(0, 0);
         let mode = EditingMode::Normal;
         Self {
@@ -34,6 +36,7 @@ impl TuiRenderer {
         }
     }
 
+    /// Starts the tui and handles the input.
     pub fn run(&mut self) {
         let mut terminal = ratatui::init();
         while !self.should_quit {
@@ -43,6 +46,8 @@ impl TuiRenderer {
         ratatui::restore();
     }
 
+    /// Handles the input from the terminal and translates it to the appropriate actions in the tui.
+    /// Each editing mode has a function for handling it.
     fn handle_input(&mut self) {
         let Ok(x) = event::read() else { return };
 
@@ -58,12 +63,14 @@ impl TuiRenderer {
         }
     }
 
+    /// Handles the input for insert mode.
     fn insert_ih(&mut self, key: event::KeyEvent) {
         if key.code == event::KeyCode::Esc {
             self.mode = EditingMode::Normal
         }
     }
 
+    ///Handles the input for normal mode.
     fn normal_ih(&mut self, key: event::KeyEvent) {
         match key.code {
             event::KeyCode::Char('q') => self.should_quit = true,
@@ -84,6 +91,11 @@ impl TuiRenderer {
         }
     }
 
+    /// Responsible for drawing the tui.
+    ///
+    /// # Panics
+    ///
+    /// Panics if [ratatui::terminal::Terminal::draw] function fails. This should not be an issue.
     fn draw(&mut self, terminal: &mut DefaultTerminal) {
         terminal
             .draw(|frame| {
@@ -92,7 +104,7 @@ impl TuiRenderer {
 
                 let main_text = self
                     .buffer
-                    .to_parragraph(&mut self.cursor)
+                    .to_paragraph(&mut self.cursor)
                     .bg(Color::Rgb(40, 44, 52));
 
                 let status_text_mode = match self.mode {
