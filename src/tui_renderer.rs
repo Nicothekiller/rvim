@@ -1,4 +1,5 @@
-use crossterm::event::{self, Event};
+use crossterm::event;
+use crossterm::event::Event;
 use ratatui::{
     DefaultTerminal,
     layout::{Constraint, Layout},
@@ -65,8 +66,19 @@ impl TuiRenderer {
 
     /// Handles the input for insert mode.
     fn insert_ih(&mut self, key: event::KeyEvent) {
-        if key.code == event::KeyCode::Esc {
-            self.mode = EditingMode::Normal
+        match key.code {
+            event::KeyCode::Esc => self.mode = EditingMode::Normal,
+            event::KeyCode::Char(x) => {
+                self.buffer.file_content_mut()[self.cursor.y_copy()]
+                    .insert(self.cursor.x_copy(), x);
+                *self.cursor.x_mut() += 1;
+            }
+            event::KeyCode::Backspace => {
+                self.buffer.file_content_mut()[self.cursor.y_copy()]
+                    .remove(self.cursor.x_copy() - 1);
+                *self.cursor.x_mut() -= 1;
+            }
+            _ => {}
         }
     }
 
