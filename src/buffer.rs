@@ -20,7 +20,7 @@ impl FileBuffer {
     /// Panics if file does not exist.
     pub fn new(file: String) -> Self {
         let file_content = fs::read_to_string(&file)
-            .expect("File {file} not found or could not be opened.")
+            .expect("File not found or could not be opened.")
             .split('\n')
             .map(|x| x.to_string())
             .collect();
