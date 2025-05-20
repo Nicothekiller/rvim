@@ -1,3 +1,5 @@
+use std::{fs, io::Write};
+
 use crossterm::event;
 use crossterm::event::Event;
 use ratatui::{
@@ -85,7 +87,11 @@ impl TuiRenderer {
     ///Handles the input for normal mode.
     fn normal_ih(&mut self, key: event::KeyEvent) {
         match key.code {
-            event::KeyCode::Char('q') => self.should_quit = true,
+            event::KeyCode::Char('q') => {
+                self.should_quit = true;
+                let file_content = self.buffer.file_content().join("\n");
+                fs::write(self.buffer.file(), file_content).expect("Unable to write file.");
+            }
             event::KeyCode::Char('l') => *self.cursor.x_mut() += 1,
             event::KeyCode::Char('k') => {
                 if *self.cursor.y_mut() != 0 {
