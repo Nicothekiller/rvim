@@ -76,9 +76,20 @@ impl TuiRenderer {
                 *self.cursor.x_mut() += 1;
             }
             event::KeyCode::Backspace => {
-                self.buffer.file_content_mut()[self.cursor.y_copy()]
-                    .remove(self.cursor.x_copy() - 1);
-                *self.cursor.x_mut() -= 1;
+                let y_copy = self.cursor.y_copy();
+                if self.cursor.x_copy() != 0 {
+                    self.buffer.file_content_mut()[y_copy].remove(self.cursor.x_copy() - 1);
+                    *self.cursor.x_mut() -= 1;
+                } else {
+                    unsafe {
+                        if self.cursor.y_copy() != 0 {
+                            let file_content_mut: *mut Vec<String> = self.buffer.file_content_mut();
+                            (*file_content_mut)[y_copy - 1].push_str(&(*file_content_mut)[y_copy]);
+                            (*file_content_mut).remove(y_copy);
+                            *self.cursor.y_mut() -= 1;
+                        }
+                    }
+                }
             }
             _ => {}
         }
