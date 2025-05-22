@@ -48,7 +48,7 @@ impl FileBuffer {
             .enumerate()
             .map(|(y_index, line)| {
                 if y_index == 0 {
-                    let span: Vec<Span> = line
+                    let mut span: Vec<Span> = line
                         .chars()
                         .enumerate()
                         .map(|(x_index, cchar)| {
@@ -58,6 +58,9 @@ impl FileBuffer {
                             Span::from(cchar.to_string())
                         })
                         .collect();
+                    if span.len() <= cursor.x_copy() {
+                        span.push(Span::from(" ").on_white().black());
+                    }
                     return Line::from(span);
                 }
                 Line::from(line.as_str())

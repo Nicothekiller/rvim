@@ -1,4 +1,4 @@
-use std::{fs, io::Write};
+use std::fs;
 
 use crossterm::event;
 use crossterm::event::Event;
@@ -77,18 +77,56 @@ impl TuiRenderer {
             }
             event::KeyCode::Backspace => {
                 let y_copy = self.cursor.y_copy();
-                if self.cursor.x_copy() != 0 {
-                    self.buffer.file_content_mut()[y_copy].remove(self.cursor.x_copy() - 1);
+                let x_copy = self.cursor.x_copy();
+                if x_copy != 0 {
+                    self.buffer.file_content_mut()[y_copy].remove(x_copy - 1);
                     *self.cursor.x_mut() -= 1;
                 } else {
+                    let line_size = self.buffer.file_content()[y_copy - 1].len();
                     unsafe {
                         if self.cursor.y_copy() != 0 {
                             let file_content_mut: *mut Vec<String> = self.buffer.file_content_mut();
                             (*file_content_mut)[y_copy - 1].push_str(&(*file_content_mut)[y_copy]);
                             (*file_content_mut).remove(y_copy);
-                            *self.cursor.y_mut() -= 1;
                         }
                     }
+                    *self.cursor.y_mut() -= 1;
+                    *self.cursor.x_mut() = line_size;
+                }
+            }
+            event::KeyCode::Enter => {
+                let y_copy = self.cursor.y_copy();
+                let x_copy = self.cursor.x_copy();
+                let line_size = self.buffer.file_content()[y_copy].len();
+                unsafe {
+                    let file_content_mut: *mut Vec<String> = self.buffer.file_content_mut();
+                    (*file_content_mut).insert(
+                        y_copy + 1,
+                        (*file_content_mut)[y_copy][x_copy..line_size].to_string(),
+                    );
+                    (*file_content_mut)[y_copy].truncate(x_copy);
+                }
+                *self.cursor.y_mut() += 1;
+                *self.cursor.x_mut() = 0;
+            }
+            event::KeyCode::Down => {
+                if self.cursor.y_copy() + 1 != self.buffer.file_content().len() - 1 {
+                    *self.cursor.y_mut() += 1;
+                }
+            }
+            event::KeyCode::Up => {
+                if self.cursor.y_copy() != 0 {
+                    *self.cursor.y_mut() -= 1;
+                }
+            }
+            event::KeyCode::Right => {
+                if self.cursor.x_copy() != self.buffer.file_content()[self.cursor.y_copy()].len() {
+                    *self.cursor.x_mut() += 1;
+                }
+            }
+            event::KeyCode::Left => {
+                if self.cursor.x_copy() != 0 {
+                    *self.cursor.x_mut() -= 1;
                 }
             }
             _ => {}
@@ -103,19 +141,27 @@ impl TuiRenderer {
                 let file_content = self.buffer.file_content().join("\n");
                 fs::write(self.buffer.file(), file_content).expect("Unable to write file.");
             }
-            event::KeyCode::Char('l') => *self.cursor.x_mut() += 1,
-            event::KeyCode::Char('k') => {
-                if *self.cursor.y_mut() != 0 {
-                    *self.cursor.y_mut() -= 1
-                }
-            }
-            event::KeyCode::Char('j') => *self.cursor.y_mut() += 1,
-            event::KeyCode::Char('h') => {
-                if *self.cursor.x_mut() != 0 {
-                    *self.cursor.x_mut() -= 1
-                }
-            }
             event::KeyCode::Char('i') => self.mode = EditingMode::Insert,
+            event::KeyCode::Char('j') | event::KeyCode::Down => {
+                if self.cursor.y_copy() + 1 != self.buffer.file_content().len() - 1 {
+                    *self.cursor.y_mut() += 1;
+                }
+            }
+            event::KeyCode::Char('k') | event::KeyCode::Up => {
+                if self.cursor.y_copy() != 0 {
+                    *self.cursor.y_mut() -= 1;
+                }
+            }
+            event::KeyCode::Char('l') | event::KeyCode::Right => {
+                if self.cursor.x_copy() != self.buffer.file_content()[self.cursor.y_copy()].len() {
+                    *self.cursor.x_mut() += 1;
+                }
+            }
+            event::KeyCode::Char('h') | event::KeyCode::Left => {
+                if self.cursor.x_copy() != 0 {
+                    *self.cursor.x_mut() -= 1;
+                }
+            }
             _ => {}
         }
     }
