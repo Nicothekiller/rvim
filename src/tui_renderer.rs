@@ -69,12 +69,18 @@ impl TuiRenderer {
     /// Handles the input for insert mode.
     fn insert_ih(&mut self, key: event::KeyEvent) {
         match key.code {
-            event::KeyCode::Esc => self.mode = EditingMode::Normal,
+            event::KeyCode::Esc => {
+                if self.cursor.x_copy() != 0 {
+                    *self.cursor.x_mut() -= 1;
+                }
+                self.mode = EditingMode::Normal
+            }
             event::KeyCode::Char(x) => {
                 self.buffer.file_content_mut()[self.cursor.y_copy()]
                     .insert(self.cursor.x_copy(), x);
                 *self.cursor.x_mut() += 1;
             }
+            //for removing characters
             event::KeyCode::Backspace => {
                 let y_copy = self.cursor.y_copy();
                 let x_copy = self.cursor.x_copy();
@@ -82,6 +88,10 @@ impl TuiRenderer {
                     self.buffer.file_content_mut()[y_copy].remove(x_copy - 1);
                     *self.cursor.x_mut() -= 1;
                 } else {
+                    // If cursor is at the start of the line, for removing the line and moving
+                    // content upwards. Uses unsafe because program is single threaded and the borrow
+                    // checker was being annoying. It should only be dangerous if mutli-threading is
+                    // added to file editing.
                     let line_size = self.buffer.file_content()[y_copy - 1].len();
                     unsafe {
                         if self.cursor.y_copy() != 0 {
@@ -98,6 +108,10 @@ impl TuiRenderer {
                 let y_copy = self.cursor.y_copy();
                 let x_copy = self.cursor.x_copy();
                 let line_size = self.buffer.file_content()[y_copy].len();
+
+                // Similar case to the Backspace unsafe handler. For entering new lines. Uses unsafe
+                // because the borrow checker was being annoying. Only dangerous if mutli-threading
+                // is added to file editing.
                 unsafe {
                     let file_content_mut: *mut Vec<String> = self.buffer.file_content_mut();
                     (*file_content_mut).insert(
@@ -136,12 +150,21 @@ impl TuiRenderer {
     ///Handles the input for normal mode.
     fn normal_ih(&mut self, key: event::KeyEvent) {
         match key.code {
+            // TODO: Add proper command mode with wq command and delete q keybind in normal mode.
             event::KeyCode::Char('q') => {
                 self.should_quit = true;
                 let file_content = self.buffer.file_content().join("\n");
                 fs::write(self.buffer.file(), file_content).expect("Unable to write file.");
             }
-            event::KeyCode::Char('i') => self.mode = EditingMode::Insert,
+            event::KeyCode::Char('i') => {
+                let x_copy = self.cursor.x_copy();
+                let line_len = self.buffer.file_content()[self.cursor.y_copy()].len();
+
+                if x_copy > line_len {
+                    *self.cursor.x_mut() = line_len;
+                }
+                self.mode = EditingMode::Insert
+            }
             event::KeyCode::Char('j') | event::KeyCode::Down => {
                 if self.cursor.y_copy() + 1 != self.buffer.file_content().len() - 1 {
                     *self.cursor.y_mut() += 1;
@@ -158,8 +181,16 @@ impl TuiRenderer {
                 }
             }
             event::KeyCode::Char('h') | event::KeyCode::Left => {
-                if self.cursor.x_copy() != 0 {
-                    *self.cursor.x_mut() -= 1;
+                let x_copy = self.cursor.x_copy();
+
+                if x_copy != 0 {
+                    let line_len = self.buffer.file_content()[self.cursor.y_copy()].len();
+
+                    if x_copy > line_len {
+                        *self.cursor.x_mut() = line_len - 1;
+                    } else {
+                        *self.cursor.x_mut() -= 1;
+                    }
                 }
             }
             _ => {}
